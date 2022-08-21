@@ -28,6 +28,8 @@ async def handle_func(event: MessageEvent, cmd_arg: Message = CommandArg()):
                 await hyp.send(await bedwars_message(cmd_args[0], event))
             case "sw" | "skywars":
                 await hyp.send(await skywars_message(cmd_args[0], event))
+            case "guild" | "g":
+                await hyp.send(await guild_message(cmd_args[0], event))
             case "uhc":
                 pass
             case "mcgo":

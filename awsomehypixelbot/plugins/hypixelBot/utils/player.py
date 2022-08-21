@@ -4,9 +4,10 @@ from aiohttp import ContentTypeError
 import hypixel
 from hypixel import Player
 from hypixel import PlayerNotFoundException
-from .objs import BedwarsObj, SkywarsObj, PlayerObj
 from nonebot import get_driver
+from hypixel import Guild
 
+from .objs import BedwarsObj, SkywarsObj, PlayerObj, GuildObj
 from ..config import Config
 
 _ = Config.parse_obj(get_driver().config)
@@ -14,6 +15,7 @@ hypixel.setKeys([_.token])
 
 NEVER_ENTER_ERROR = "Never Enter"
 NOT_EXIST_ERROR = "Not Exist"
+GUILD_NOT_FOUND = "Guild Not Found"
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
@@ -57,26 +59,20 @@ async def get_info(name):
     _player.mostRecentGameType = player.JSON["mostRecentGameType"]
     _player.currentPet = player.JSON["currentPet"]
     _player.achievementPoints = player.JSON["achievementPoints"]
-    _player.rank = player.getRank().get("rank").upper().replace("SUPERSTAR", "MVP++").replace(" PLUS", "+").replace("YOUTUBER", "YOUTUBE")
+    _player.rank = player.getRank().get("rank").upper().replace("SUPERSTAR", "MVP++").replace(" PLUS", "+").replace(
+        "YOUTUBER", "YOUTUBE")
     return _player
 
 
 async def get_bedwars(name):
     stats = BedwarsObj
-
-    try:
-        raw_json = Player(await get_uuid(name)).JSON
-        bw_stats = raw_json["stats"]["Bedwars"]
-        achievements = raw_json["achievements"]
-    except (ContentTypeError, KeyError, aiohttp.ContentTypeError):
-        stats.error = NEVER_ENTER_ERROR
-        return stats
-    except PlayerNotFoundException:
-        stats.error = NOT_EXIST_ERROR
-        return stats
+    raw_json = Player(await get_uuid(name)).JSON
+    bw_stats = raw_json["stats"]["Bedwars"]
+    achievements = raw_json["achievements"]
 
     keys = bw_stats.keys()
-    json_keys = ["total_challenges_completed", "coins", "wins_bedwars", "losses_bedwars", "beds_broken_bedwars", "beds_lost_bedwars", "fall_deaths_bedwars"]
+    json_keys = ["total_challenges_completed", "coins", "wins_bedwars", "losses_bedwars", "beds_broken_bedwars",
+                 "beds_lost_bedwars", "fall_deaths_bedwars"]
     for key in json_keys:
         if key not in keys:
             bw_stats[key] = 0
@@ -105,19 +101,10 @@ async def get_bedwars(name):
 
 async def get_skywars(name):
     stats = SkywarsObj
-
-    try:
-        raw_json = Player(await get_uuid(name)).JSON
-        sw_stats = raw_json["stats"]["SkyWars"]
-    except (ContentTypeError, KeyError, aiohttp.ContentTypeError):
-        stats.error = NEVER_ENTER_ERROR
-        return stats
-    except PlayerNotFoundException:
-        stats.error = NOT_EXIST_ERROR
-        return stats
-
+    sw_stats = Player(await get_uuid(name)).JSON["stats"]["SkyWars"]
     keys = sw_stats.keys()
-    json_keys = ["kills", "coins", "wins", "losses", "deaths", "souls", "most_kills_game", "heads", "games_played_skywars", "assists"]
+    json_keys = ["kills", "coins", "wins", "losses", "deaths", "souls", "most_kills_game", "heads",
+                 "games_played_skywars", "assists"]
     for key in json_keys:
         if key not in keys:
             sw_stats[key] = 0
@@ -135,3 +122,29 @@ async def get_skywars(name):
     stats.wins = sw_stats["wins"]
     stats.losses = sw_stats["losses"]
     return stats
+
+
+async def get_guild(name):
+    _guild = GuildObj
+    player = Player(await get_uuid(name))
+    try:
+        guild = Guild(player.getGuildID())
+    except hypixel.GuildIDNotValid:
+        _guild.error = GUILD_NOT_FOUND
+        return _guild
+
+    keys = guild.JSON.keys()
+    json_keys = ("description", "preferredGames", "tag")
+
+    for key in json_keys:
+        if key not in keys:
+            guild.JSON[key] = "None"
+
+    _guild.name = guild.JSON["name"]
+    _guild.id = guild.GuildID
+    _guild.description = guild.JSON["description"]
+    _guild.tag = guild.JSON["tag"]
+    _guild.created = time.strftime(TIME_FORMAT, time.localtime(guild.JSON["created"] / 1000))
+    _guild.preferredGames = guild.JSON["preferredGames"]
+    _guild.members = guild.JSON["members"]
+    return _guild

@@ -55,3 +55,23 @@ class SkywarsObj:
     win_streak = None
     most_kills_game = None
     heads = None
+    error: str
+
+
+@dataclass()
+class MemberObj:
+    uuid: str
+    rank: str
+    joined: int
+
+
+@dataclass()
+class GuildObj:
+    id: str
+    name: str
+    created: str
+    preferredGames: list[str]
+    description: str
+    tag: str
+    members: str
+    error: str = None
